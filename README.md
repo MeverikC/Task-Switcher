@@ -35,7 +35,7 @@
 
 ```bash
 # 克隆仓库
-git clone [https://github.com/your-repo/task-switcher.git](https://github.com/your-repo/task-switcher.git)
+git clone https://github.com/MeverikC/Task-Switcher.git
 cd task-switcher
 
 # 创建虚拟环境 (推荐)
@@ -53,14 +53,6 @@ pip install -r requirements.txt
 ```bash
 python app.py
 ```
-
-> **依赖列表**:
-> * PyQt6
-> * pywin32
-> * keyboard
-> * psutil
-> 
->
 
 ## 🎮 使用说明 (Usage)
 
