@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (QApplication, QListWidget, QListWidgetItem,
                              QSystemTrayIcon, QMenu, QStyledItemDelegate, QFileIconProvider,
                              QPushButton, QColorDialog, QSlider, QSpinBox, QRadioButton, QButtonGroup, QHBoxLayout,
                              QLabel, QFrame, QStyleOption)
-from PyQt6.QtCore import Qt, QSize, pyqtSignal, QFileInfo, QRect
+from PyQt6.QtCore import Qt, QSize, pyqtSignal, QFileInfo, QRect, QTimer
 from PyQt6.QtGui import QIcon, QAction, QColor, QPainter
 
 
@@ -376,6 +376,19 @@ class WindowSwitcher(QWidget):
         self.sig_next.connect(self.select_next)
         self.sig_activate.connect(self.activate_selected)
 
+        # 1. 开启心跳定时器 (防止进程被系统挂起)
+        self.heartbeat_timer = QTimer(self)
+        self.heartbeat_timer.timeout.connect(self.on_heartbeat)
+        self.heartbeat_timer.start(1000)  # 每 1 秒跳动一次
+
+        # 2. 开启钩子守护定时器 (定期重置钩子，防止 Windows 杀钩子)
+        self.hook_guard_timer = QTimer(self)
+        self.hook_guard_timer.timeout.connect(self.reset_hooks)
+        self.hook_guard_timer.start(1000 * 60 * 30)  # 每 30 分钟重置一次
+
+        # 初始化钩子
+        self.setup_hooks()
+
         self.init_ui()
         self.init_tray_icon()
         self.apply_settings()
@@ -397,6 +410,41 @@ class WindowSwitcher(QWidget):
         self.list_widget.itemClicked.connect(lambda item: self.activate_selected())
 
         self.layout.addWidget(self.list_widget)
+
+    def on_heartbeat(self):
+        """
+        空操作，仅仅为了让 Qt 事件循环保持活跃，
+        防止 Windows 认为进程空闲而将其挂起/降低优先级。
+        """
+        pass
+
+    def setup_hooks(self):
+        """挂载键盘钩子"""
+        try:
+            # 先卸载所有旧钩子，防止重复
+            keyboard.unhook_all()
+
+            # 重新挂载
+            keyboard.add_hotkey('alt+tab', self.on_hotkey_tab, suppress=True)
+            keyboard.on_release_key('alt', self.on_hotkey_release)
+            print(f"Hooks installed/refreshed at {time.strftime('%H:%M:%S')}")
+        except Exception as e:
+            print(f"Hook Error: {e}")
+
+    def reset_hooks(self):
+        """定期重置钩子"""
+        # print("Watchdog: Refreshing hooks...")
+        self.setup_hooks()
+
+    def on_hotkey_tab(self):
+        if not self.isVisible():
+            self.sig_show.emit()
+        else:
+            self.sig_next.emit()
+
+    def on_hotkey_release(self, e):
+        if self.isVisible():
+            self.sig_activate.emit()
 
     def apply_settings(self):
         bg = CONFIG.get("bg_color")
@@ -714,6 +762,6 @@ if __name__ == "__main__":
 
     switcher = WindowSwitcher()
 
-    setup_hook(switcher)
+    # setup_hook(switcher)
 
     sys.exit(app.exec())

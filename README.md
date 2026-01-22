@@ -81,7 +81,7 @@ pip install pyinstaller
 # 执行打包命令 (需要管理员权限 manifest)
 pyinstaller -F -w --uac-admin --icon=icon.ico --add-data "icon.png;." --name="Task Switcher" app.py
 # 或
-pyinstaller app.spec
+pyinstaller *.spec
 ```
 
 * `-F`: 单文件模式
